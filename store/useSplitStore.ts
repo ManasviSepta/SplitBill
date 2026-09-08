@@ -44,8 +44,9 @@ interface SplitStore {
   resetReceipt: () => void;
 
   // People & Assignment Actions
-  addParticipant: (name: string, color?: string) => void;
+  addParticipant: (name: string, color?: string) => boolean;
   removeParticipant: (id: string) => void;
+  clearParticipants: () => void;
   toggleItemParticipant: (itemId: string, participantId: string) => void;
   assignAllToItem: (itemId: string) => void;
   clearItemAssignments: (itemId: string) => void;
@@ -79,8 +80,8 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   receiptItems: MOCK_RECEIPT_ITEMS,
   charges: MOCK_CHARGES,
 
-  participants: DEFAULT_PARTICIPANTS,
-  assignments: DEFAULT_ASSIGNMENTS,
+  participants: [],
+  assignments: {},
   selectedParticipantFilter: null,
   itemFilter: "all",
 
@@ -296,16 +297,25 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       isUploaded: false,
       isExtracting: false,
       uploadProgress: 0,
+      participants: [],
+      assignments: {},
+      selectedParticipantFilter: null,
     });
   },
 
   // ---------------- PEOPLE & ASSIGNMENT ACTIONS ---------------- //
 
-  addParticipant: (name: string, color?: string) => {
+  addParticipant: (name: string, color?: string): boolean => {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed) return false;
 
-    const parts = trimmed.split(/\s+/);
+    // Case-insensitive duplicate check
+    const isDuplicate = get().participants.some(
+      (p) => p.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) return false;
+
+    const parts = trimmed.split(/\s+/).filter(Boolean);
     const initials =
       parts.length > 1
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
@@ -315,14 +325,15 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       color || PASTEL_COLORS[get().participants.length % PASTEL_COLORS.length];
 
     const newParticipant: Participant = {
-      id: `p-${Date.now()}`,
+      id: `p-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       name: trimmed,
       color: colorToUse,
       avatarInitials: initials,
-      isYou: false,
+      isYou: get().participants.length === 0,
     };
 
     set({ participants: [...get().participants, newParticipant] });
+    return true;
   },
 
   removeParticipant: (id: string) => {
@@ -339,6 +350,14 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       assignments: updatedAssignments,
       selectedParticipantFilter:
         get().selectedParticipantFilter === id ? null : get().selectedParticipantFilter,
+    });
+  },
+
+  clearParticipants: () => {
+    set({
+      participants: [],
+      assignments: {},
+      selectedParticipantFilter: null,
     });
   },
 

@@ -60,7 +60,7 @@ export function ParticipantCard({
       </div>
 
       {/* Remove Action */}
-      {canRemove && !participant.isYou ? (
+      {canRemove && onRemove && (
         <button
           type="button"
           onClick={onRemove}
@@ -69,10 +69,6 @@ export function ParticipantCard({
         >
           <Trash2 className="w-4 h-4" />
         </button>
-      ) : (
-        <span className="text-[11px] font-medium text-slate-300 px-2 py-1 select-none">
-          Primary
-        </span>
       )}
     </div>
   );

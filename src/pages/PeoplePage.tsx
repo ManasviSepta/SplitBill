@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, UserPlus, Users, Plus, AlertCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, UserPlus, Users, Plus, Sparkles, UserCheck } from "lucide-react";
 import { useSplitStore } from "@/store/useSplitStore";
 import { PeopleHeader } from "@/components/people/PeopleHeader";
 import { ParticipantCard } from "@/components/people/ParticipantCard";
@@ -31,7 +31,7 @@ export function PeoplePage() {
   } = useSplitStore();
 
   const [nameInput, setNameInput] = useState("");
-  const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[1]);
+  const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0]);
 
   useEffect(() => {
     setStep(3);
@@ -40,23 +40,35 @@ export function PeoplePage() {
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameInput.trim()) {
-      toast.error("Please enter a friend's name");
+    const trimmed = nameInput.trim();
+    if (!trimmed) {
       return;
     }
 
-    addParticipant(nameInput.trim(), selectedColor);
-    toast.success(`Added ${nameInput.trim()}`);
-    setNameInput("");
+    // Case-insensitive duplicate check
+    const isDuplicate = participants.some(
+      (p) => p.name.toLowerCase() === trimmed.toLowerCase()
+    );
 
-    // Rotate color
-    const nextIdx = (COLOR_OPTIONS.indexOf(selectedColor) + 1) % COLOR_OPTIONS.length;
-    setSelectedColor(COLOR_OPTIONS[nextIdx]);
+    if (isDuplicate) {
+      toast.error("This person is already in the list.");
+      return;
+    }
+
+    const success = addParticipant(trimmed, selectedColor);
+    if (success) {
+      toast.success("Friend added successfully.");
+      setNameInput("");
+
+      // Rotate color
+      const nextIdx = (COLOR_OPTIONS.indexOf(selectedColor) + 1) % COLOR_OPTIONS.length;
+      setSelectedColor(COLOR_OPTIONS[nextIdx]);
+    }
   };
 
   const handleContinue = () => {
     if (participants.length < 2) {
-      toast.warning("Please add at least 2 participants to split the bill");
+      toast.warning("Add at least two people to continue.");
       return;
     }
     setStep(4);
@@ -109,8 +121,9 @@ export function PeoplePage() {
               type="text"
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              placeholder="Type friend's name (e.g. Priya, Rohan, Sneha) and hit Enter"
+              placeholder="Enter friend's name (e.g. Jayesh) and press Enter"
               className="w-full bg-transparent text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+              autoFocus
             />
 
             {/* Color Swatches */}
@@ -143,7 +156,7 @@ export function PeoplePage() {
         </form>
 
         <p className="text-[11px] text-slate-400">
-          Tip: Add everyone who will participate in paying for dishes or drinks.
+          Tip: Add everyone who is participating in paying for dishes or drinks.
         </p>
       </div>
 
@@ -152,33 +165,52 @@ export function PeoplePage() {
         <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-1">
           <div className="flex items-center gap-2">
             <span className="uppercase tracking-wider">ACTIVE PARTICIPANTS</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px]">
-              {participants.length} People
-            </span>
+            {participants.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px]">
+                {participants.length} {participants.length === 1 ? "Person" : "People"}
+              </span>
+            )}
           </div>
 
           {!canContinue && (
-            <span className="text-amber-600 font-medium">
-              Add at least 1 more person to split
+            <span className="text-amber-600 font-medium text-xs">
+              Add at least two people to continue.
             </span>
           )}
         </div>
 
-        {/* Grid of Participant Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {participants.map((participant) => (
-            <ParticipantCard
-              key={participant.id}
-              participant={participant}
-              assignedDishesCount={getDishesCount(participant.id)}
-              canRemove={!participant.isYou && participants.length > 1}
-              onRemove={() => {
-                removeParticipant(participant.id);
-                toast.info(`Removed ${participant.name}`);
-              }}
-            />
-          ))}
-        </div>
+        {/* Empty State when no participants added yet */}
+        {participants.length === 0 ? (
+          <div className="bg-white rounded-[24px] border border-dashed border-slate-300 p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-2xs">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-4 text-[#16A34A] shadow-2xs">
+              <Users className="w-8 h-8 stroke-[2]" />
+            </div>
+
+            <h3 className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">
+              No friends added yet
+            </h3>
+
+            <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-sm leading-relaxed">
+              Add everyone who&apos;s sharing this meal to start assigning items.
+            </p>
+          </div>
+        ) : (
+          /* Grid of Participant Cards */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {participants.map((participant) => (
+              <ParticipantCard
+                key={participant.id}
+                participant={participant}
+                assignedDishesCount={getDishesCount(participant.id)}
+                canRemove={true}
+                onRemove={() => {
+                  removeParticipant(participant.id);
+                  toast.success(`Removed ${participant.name}`);
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Bottom CTA Card */}
@@ -192,21 +224,31 @@ export function PeoplePage() {
               Ready to assign dishes?
             </span>
             <span className="text-xs text-slate-500">
-              {participants.length} diners ready. Next step: Tag who ate what.
+              {canContinue
+                ? `${participants.length} diners ready. Next step: Tag who ate what.`
+                : "Add at least two people to continue."}
             </span>
           </div>
         </div>
 
-        <GradientButton
-          type="button"
-          onClick={handleContinue}
-          disabled={!canContinue}
-          size="md"
-          className="w-full sm:w-auto font-bold text-xs sm:text-sm px-6 py-3 disabled:opacity-50 cursor-pointer"
-        >
-          <span>Continue to Assign Items</span>
-          <ArrowRight className="w-4 h-4" />
-        </GradientButton>
+        <div className="flex flex-col sm:items-end w-full sm:w-auto gap-1">
+          <GradientButton
+            type="button"
+            onClick={handleContinue}
+            disabled={!canContinue}
+            size="md"
+            className="w-full sm:w-auto font-bold text-xs sm:text-sm px-6 py-3 disabled:opacity-50 cursor-pointer"
+          >
+            <span>Continue to Assign Items</span>
+            <ArrowRight className="w-4 h-4" />
+          </GradientButton>
+
+          {!canContinue && (
+            <span className="text-[11px] text-slate-400 text-center sm:text-right">
+              Add at least two people to continue.
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

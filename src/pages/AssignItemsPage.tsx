@@ -104,6 +104,23 @@ export function AssignItemsPage() {
             </p>
           </div>
 
+          {participants.length < 2 && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-3 text-xs text-amber-900">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  You haven&apos;t added at least two diners yet. Go to Add People to create participants.
+                </span>
+              </div>
+              <Link
+                to="/people"
+                className="font-bold text-amber-950 underline shrink-0 hover:text-amber-800 cursor-pointer"
+              >
+                Add Diners →
+              </Link>
+            </div>
+          )}
+
           {/* Quick Diners Filter Strip */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-soft p-3.5 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
