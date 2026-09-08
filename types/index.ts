@@ -34,6 +34,7 @@ export interface UploadedReceipt {
   previewUrl: string;
   uploadedAt: Date;
   isSample?: boolean;
+  file?: File;
 }
 
 export interface SampleReceiptItem {

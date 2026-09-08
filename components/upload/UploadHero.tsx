@@ -5,23 +5,12 @@ import { TRUST_CHIPS } from "@/lib/mock-data";
 
 export function UploadHero() {
   return (
-    <div className="flex flex-col items-center text-center max-w-3xl mx-auto pt-8 sm:pt-12 pb-6 px-4">
-      {/* Top Gemini Badge */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/90 border border-emerald-200/80 text-emerald-800 text-xs sm:text-sm font-medium shadow-xs mb-6"
-      >
-        <Sparkles className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600/30" />
-        <span>Powered by Gemini 1.5 Pro Multimodal Vision</span>
-      </motion.div>
-
+    <div className="flex flex-col items-center text-center max-w-3xl mx-auto pt-6 sm:pt-10 pb-6 px-4">
       {/* Main Heading */}
       <motion.h1
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
+        transition={{ duration: 0.5 }}
         className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight text-slate-900 leading-[1.15]"
       >
         Split the bill. <span className="text-[#16A34A]">Not the friendship.</span>
