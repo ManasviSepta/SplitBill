@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 interface ParticipantAvatarProps {
   initials: string;
   color?: string;
+  avatarColor?: string;
   size?: "xs" | "sm" | "md" | "lg";
   isActive?: boolean;
   className?: string;
@@ -11,11 +12,13 @@ interface ParticipantAvatarProps {
 
 export function ParticipantAvatar({
   initials,
-  color = "#16A34A",
+  color,
+  avatarColor,
   size = "md",
-  isActive = true,
   className,
 }: ParticipantAvatarProps) {
+  const bg = avatarColor || color || "#16A34A";
+
   const sizeClasses = {
     xs: "w-5 h-5 text-[9px]",
     sm: "w-6 h-6 text-[10px]",
@@ -26,13 +29,12 @@ export function ParticipantAvatar({
   return (
     <div
       style={{
-        backgroundColor: isActive ? color : "#E2E8F0",
-        color: isActive ? "#FFFFFF" : "#64748B",
+        backgroundColor: bg,
+        color: "#FFFFFF",
       }}
       className={cn(
-        "rounded-full flex items-center justify-center font-bold tracking-tight select-none shrink-0 transition-all duration-200",
+        "rounded-full flex items-center justify-center font-bold tracking-tight select-none shrink-0 shadow-2xs transition-all duration-200",
         sizeClasses[size],
-        isActive ? "shadow-2xs" : "opacity-50",
         className
       )}
     >

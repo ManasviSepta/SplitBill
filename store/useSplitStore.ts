@@ -328,7 +328,9 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       id: `p-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       name: trimmed,
       color: colorToUse,
+      avatarColor: colorToUse,
       avatarInitials: initials,
+      initials: initials,
       isYou: get().participants.length === 0,
     };
 

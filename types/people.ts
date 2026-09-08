@@ -3,7 +3,9 @@ export interface Participant {
   name: string;
   isYou?: boolean;
   color: string; // Hex or tailwind color class
+  avatarColor?: string; // Persistent pastel avatar color
   avatarInitials: string;
+  initials?: string;
   upiId?: string;
   phone?: string;
 }
