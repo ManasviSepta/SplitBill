@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-green: #16A34A;
+  --color-dark-green: #15803D;
+  --color-bg-base: #F8FAF9;
+  --color-surface: #FFFFFF;
+  --color-border-subtle: #E5E7EB;
+  --color-muted-text: #64748B;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
+  --radius-card: 24px;
+  --radius-btn: 14px;
+}
+
+:root {
+  --background: #F8FAF9;
+  --foreground: #0F172A;
+  --primary: #16A34A;
+  --primary-foreground: #FFFFFF;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --border: #E5E7EB;
+  --muted: #64748B;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Background subtle dot grid pattern */
+.bg-grid-dots {
+  background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Rounded design tokens */
+.rounded-card {
+  border-radius: 24px;
+}
+
+.rounded-btn {
+  border-radius: 14px;
+}
+
+/* Shadows matching reference UI */
+.shadow-soft {
+  box-shadow: 0 4px 24px -2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.02);
+}
+
+.shadow-card-elevated {
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.06), 0 2px 10px -2px rgba(15, 23, 42, 0.03);
+}
+
+.shadow-glow-green {
+  box-shadow: 0 8px 24px -4px rgba(22, 163, 74, 0.35);
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F8FAF9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
