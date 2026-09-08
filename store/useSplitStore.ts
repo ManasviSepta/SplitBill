@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { BillCharges, ExtractedBillData, ReceiptItem, RestaurantInfo } from "@/types/review";
+import { AllocationStats, Participant, ParticipantBreakdown } from "@/types/people";
 import {
+  DEFAULT_ASSIGNMENTS,
+  DEFAULT_PARTICIPANTS,
   MOCK_CHARGES,
   MOCK_RECEIPT_ITEMS,
   MOCK_RESTAURANT,
@@ -23,6 +26,12 @@ interface SplitStore {
   receiptItems: ReceiptItem[];
   charges: BillCharges;
 
+  // Participants & Assignments State
+  participants: Participant[];
+  assignments: Record<string, string[]>; // itemId -> participantIds[]
+  selectedParticipantFilter: string | null;
+  itemFilter: "all" | "assigned" | "unassigned" | "shared";
+
   // Actions
   setReceiptImage: (url: string | null) => void;
   setExtractedBill: (data: ExtractedBillData, imageUrl: string) => void;
@@ -33,7 +42,31 @@ interface SplitStore {
   removeItem: (id: string) => void;
   recalculateCharges: () => void;
   resetReceipt: () => void;
+
+  // People & Assignment Actions
+  addParticipant: (name: string, color?: string) => void;
+  removeParticipant: (id: string) => void;
+  toggleItemParticipant: (itemId: string, participantId: string) => void;
+  assignAllToItem: (itemId: string) => void;
+  clearItemAssignments: (itemId: string) => void;
+  setSelectedParticipantFilter: (id: string | null) => void;
+  setItemFilter: (filter: "all" | "assigned" | "unassigned" | "shared") => void;
+
+  // Computed Selectors
+  getParticipantBreakdown: () => ParticipantBreakdown[];
+  getAllocationStats: () => AllocationStats;
 }
+
+const PASTEL_COLORS = [
+  "#16A34A", // Emerald
+  "#3B82F6", // Blue
+  "#EF4444", // Red/Coral
+  "#8B5CF6", // Purple
+  "#F59E0B", // Amber
+  "#EC4899", // Pink
+  "#06B6D4", // Cyan
+  "#14B8A6", // Teal
+];
 
 export const useSplitStore = create<SplitStore>((set, get) => ({
   currentStep: 1,
@@ -46,12 +79,16 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   receiptItems: MOCK_RECEIPT_ITEMS,
   charges: MOCK_CHARGES,
 
+  participants: DEFAULT_PARTICIPANTS,
+  assignments: DEFAULT_ASSIGNMENTS,
+  selectedParticipantFilter: null,
+  itemFilter: "all",
+
   setStep: (step: number) => set({ currentStep: step }),
 
   setReceiptImage: (url: string | null) => set({ receiptImage: url }),
 
   setExtractedBill: (data: ExtractedBillData, imageUrl: string) => {
-    // Map extracted items into ReceiptItem with unique IDs
     const mappedItems: ReceiptItem[] = (data.items || []).map((item, idx) => ({
       id: `item-${Date.now()}-${idx + 1}`,
       name: item.name,
@@ -119,6 +156,18 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       ocrAccuracy: data.ocrAccuracy || "98.8%",
     };
 
+    // Initialize default assignment for newly extracted items (assign first 2-3 participants or unassigned)
+    const newAssignments: Record<string, string[]> = {};
+    const defaultDiners = get().participants.slice(0, 3).map((p) => p.id);
+    mappedItems.forEach((item, idx) => {
+      // Split first item among diners, leave others ready to assign
+      if (idx === 0) {
+        newAssignments[item.id] = defaultDiners;
+      } else {
+        newAssignments[item.id] = [];
+      }
+    });
+
     set({
       receiptImage: imageUrl || SAMPLE_RECEIPT_IMAGE,
       isUploaded: true,
@@ -128,6 +177,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       restaurant,
       receiptItems: mappedItems,
       charges,
+      assignments: newAssignments,
     });
   },
 
@@ -202,7 +252,10 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   },
 
   removeItem: (id: string) => {
-    set({ receiptItems: get().receiptItems.filter((i) => i.id !== id) });
+    const newItems = get().receiptItems.filter((i) => i.id !== id);
+    const newAssignments = { ...get().assignments };
+    delete newAssignments[id];
+    set({ receiptItems: newItems, assignments: newAssignments });
     get().recalculateCharges();
   },
 
@@ -244,5 +297,178 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       isExtracting: false,
       uploadProgress: 0,
     });
+  },
+
+  // ---------------- PEOPLE & ASSIGNMENT ACTIONS ---------------- //
+
+  addParticipant: (name: string, color?: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const parts = trimmed.split(/\s+/);
+    const initials =
+      parts.length > 1
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : trimmed.slice(0, 2).toUpperCase();
+
+    const colorToUse =
+      color || PASTEL_COLORS[get().participants.length % PASTEL_COLORS.length];
+
+    const newParticipant: Participant = {
+      id: `p-${Date.now()}`,
+      name: trimmed,
+      color: colorToUse,
+      avatarInitials: initials,
+      isYou: false,
+    };
+
+    set({ participants: [...get().participants, newParticipant] });
+  },
+
+  removeParticipant: (id: string) => {
+    // Remove participant from diner list and from all item assignments
+    const updatedParticipants = get().participants.filter((p) => p.id !== id);
+    const updatedAssignments: Record<string, string[]> = {};
+
+    Object.entries(get().assignments).forEach(([itemId, diners]) => {
+      updatedAssignments[itemId] = diners.filter((dId) => dId !== id);
+    });
+
+    set({
+      participants: updatedParticipants,
+      assignments: updatedAssignments,
+      selectedParticipantFilter:
+        get().selectedParticipantFilter === id ? null : get().selectedParticipantFilter,
+    });
+  },
+
+  toggleItemParticipant: (itemId: string, participantId: string) => {
+    const current = get().assignments[itemId] || [];
+    let updated: string[];
+
+    if (current.includes(participantId)) {
+      updated = current.filter((id) => id !== participantId);
+    } else {
+      updated = [...current, participantId];
+    }
+
+    set({
+      assignments: {
+        ...get().assignments,
+        [itemId]: updated,
+      },
+    });
+  },
+
+  assignAllToItem: (itemId: string) => {
+    const allIds = get().participants.map((p) => p.id);
+    const current = get().assignments[itemId] || [];
+
+    // If already all assigned, unassign all; otherwise assign everyone
+    const isAll = current.length === allIds.length;
+    set({
+      assignments: {
+        ...get().assignments,
+        [itemId]: isAll ? [] : allIds,
+      },
+    });
+  },
+
+  clearItemAssignments: (itemId: string) => {
+    set({
+      assignments: {
+        ...get().assignments,
+        [itemId]: [],
+      },
+    });
+  },
+
+  setSelectedParticipantFilter: (id: string | null) =>
+    set({ selectedParticipantFilter: id }),
+
+  setItemFilter: (filter: "all" | "assigned" | "unassigned" | "shared") =>
+    set({ itemFilter: filter }),
+
+  // ---------------- COMPUTED SELECTORS ---------------- //
+
+  getParticipantBreakdown: (): ParticipantBreakdown[] => {
+    const { participants, receiptItems, assignments, charges } = get();
+    const totalFoodSubtotal = charges.subtotal || 1;
+
+    const breakdown: ParticipantBreakdown[] = participants.map((p) => {
+      let foodSubtotal = 0;
+      const assignedItemNames: string[] = [];
+
+      receiptItems.forEach((item) => {
+        const assignedDiners = assignments[item.id] || [];
+        if (assignedDiners.includes(p.id)) {
+          const numDiners = assignedDiners.length;
+          const share = item.totalPrice / numDiners;
+          foodSubtotal += share;
+          assignedItemNames.push(item.name);
+        }
+      });
+
+      // Proportional distribution of taxes, service charge, and discounts
+      const ratio = totalFoodSubtotal > 0 ? foodSubtotal / totalFoodSubtotal : 0;
+      const taxShare = Number((charges.gstAmount * ratio).toFixed(2));
+      const serviceShare = Number((charges.serviceFeeAmount * ratio).toFixed(2));
+      const discountShare = Number((charges.discountAmount * ratio).toFixed(2));
+      const grandTotal = Number(
+        (foodSubtotal + taxShare + serviceShare - discountShare).toFixed(2)
+      );
+      const percentageOfBill = Number((ratio * 100).toFixed(1));
+
+      return {
+        participantId: p.id,
+        name: p.name,
+        initials: p.avatarInitials,
+        color: p.color,
+        isYou: p.isYou,
+        itemCount: assignedItemNames.length,
+        itemNames: assignedItemNames,
+        foodSubtotal: Number(foodSubtotal.toFixed(2)),
+        taxShare,
+        serviceShare,
+        discountShare,
+        grandTotal,
+        percentageOfBill,
+      };
+    });
+
+    // Sort descending by highest amount (as in screenshot)
+    return breakdown.sort((a, b) => b.grandTotal - a.grandTotal);
+  },
+
+  getAllocationStats: (): AllocationStats => {
+    const { receiptItems, assignments, charges } = get();
+    const totalItems = receiptItems.length;
+
+    let assignedItemsCount = 0;
+    let allocatedSubtotal = 0;
+
+    receiptItems.forEach((item) => {
+      const diners = assignments[item.id] || [];
+      if (diners.length > 0) {
+        assignedItemsCount += 1;
+        allocatedSubtotal += item.totalPrice;
+      }
+    });
+
+    const unassignedItemsCount = totalItems - assignedItemsCount;
+    const totalSubtotal = charges.subtotal;
+    const percentageAllocated =
+      totalItems > 0 ? Math.round((assignedItemsCount / totalItems) * 100) : 0;
+    const isFullyAllocated = totalItems > 0 && unassignedItemsCount === 0;
+
+    return {
+      totalItems,
+      assignedItemsCount,
+      unassignedItemsCount,
+      allocatedSubtotal: Number(allocatedSubtotal.toFixed(2)),
+      totalSubtotal,
+      percentageAllocated,
+      isFullyAllocated,
+    };
   },
 }));

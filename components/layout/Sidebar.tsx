@@ -6,8 +6,21 @@ import { useSplitStore } from "@/store/useSplitStore";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+import { useLocation } from "react-router-dom";
+
 export function Sidebar() {
   const currentStep = useSplitStore((state) => state.currentStep);
+  const location = useLocation();
+
+  const stepRoutes: Record<string, number> = {
+    "/": 1,
+    "/review": 2,
+    "/people": 3,
+    "/assign-items": 4,
+    "/split": 5,
+  };
+
+  const effectiveStep = stepRoutes[location.pathname] || currentStep;
 
   const stepLabels: Record<number, string> = {
     1: "Upload Receipt",
@@ -82,8 +95,8 @@ export function Sidebar() {
 
         {/* Mobile Step Badge */}
         <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-semibold">
-          <span>Step {currentStep} of 5:</span>
-          <span className="font-bold">{stepLabels[currentStep] || "Workflow"}</span>
+          <span>Step {effectiveStep} of 5:</span>
+          <span className="font-bold">{stepLabels[effectiveStep] || "Workflow"}</span>
         </div>
       </div>
     </>

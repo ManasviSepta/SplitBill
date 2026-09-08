@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSplitStore } from "@/store/useSplitStore";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +9,7 @@ const STEPS = [
   { id: 1, label: "Upload Receipt", path: "/" },
   { id: 2, label: "Review Bill", path: "/review" },
   { id: 3, label: "Add People", path: "/people" },
-  { id: 4, label: "Assign Items", path: "/assign" },
+  { id: 4, label: "Assign Items", path: "/assign-items" },
   { id: 5, label: "Split Result", path: "/split" },
 ];
 
@@ -18,10 +18,15 @@ export function VerticalStepper({ className }: { className?: string }) {
   const setStep = useSplitStore((state) => state.setStep);
   const isUploaded = useSplitStore((state) => state.isUploaded);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Find step from location if needed
+  const activeStepObj = STEPS.find((s) => s.path === location.pathname);
+  const effectiveStep = activeStepObj ? activeStepObj.id : currentStep;
 
   const handleStepClick = (stepId: number, path: string) => {
-    // Only allow clicking to steps that are completed or active, or if receipt is uploaded
-    if (stepId <= currentStep || (stepId === 2 && isUploaded)) {
+    // Allow clicking to steps that are completed or active, or if receipt is uploaded
+    if (stepId <= effectiveStep || (stepId === 2 && isUploaded)) {
       setStep(stepId);
       navigate(path);
     }
@@ -30,9 +35,9 @@ export function VerticalStepper({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-col gap-6 py-4", className)}>
       {STEPS.map((step, index) => {
-        const isCompleted = currentStep > step.id;
-        const isActive = currentStep === step.id;
-        const isClickable = step.id <= currentStep || (step.id === 2 && isUploaded);
+        const isCompleted = effectiveStep > step.id;
+        const isActive = effectiveStep === step.id;
+        const isClickable = step.id <= effectiveStep || (step.id === 2 && isUploaded);
 
         return (
           <div key={step.id} className="relative flex items-start group">

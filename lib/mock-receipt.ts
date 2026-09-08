@@ -100,3 +100,59 @@ export const MOCK_CHARGES: BillCharges = {
 
 export const SAMPLE_RECEIPT_IMAGE =
   "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80";
+
+export const DEFAULT_PARTICIPANTS = [
+  {
+    id: "p-1",
+    name: "Aarav Sharma",
+    isYou: true,
+    color: "#15803D", // Forest green
+    avatarInitials: "AS",
+  },
+  {
+    id: "p-2",
+    name: "Priya Nair",
+    isYou: false,
+    color: "#16A34A", // Emerald green
+    avatarInitials: "PN",
+  },
+  {
+    id: "p-3",
+    name: "Rohan Mehta",
+    isYou: false,
+    color: "#EF4444", // Coral red
+    avatarInitials: "RM",
+  },
+  {
+    id: "p-4",
+    name: "Sneha Patel",
+    isYou: false,
+    color: "#8B5CF6", // Purple
+    avatarInitials: "SP",
+  },
+  {
+    id: "p-5",
+    name: "Vikram Rao",
+    isYou: false,
+    color: "#3B82F6", // Indigo blue
+    avatarInitials: "VR",
+  },
+  {
+    id: "p-6",
+    name: "Ananya Iyer",
+    isYou: false,
+    color: "#475569", // Slate
+    avatarInitials: "AI",
+  },
+];
+
+export const DEFAULT_ASSIGNMENTS: Record<string, string[]> = {
+  "item-1": ["p-1", "p-3", "p-4"], // Truffle Fries -> Aarav, Rohan, Sneha
+  "item-2": ["p-1", "p-2", "p-3", "p-4", "p-5", "p-6"], // Pizza -> Shared with everyone
+  "item-3": ["p-3", "p-5"], // Wings -> Rohan, Vikram
+  "item-4": ["p-2"], // Risotto -> Priya only
+  "item-5": ["p-1", "p-4", "p-6"], // Iced tea -> Aarav, Sneha, Ananya
+  "item-6": ["p-3", "p-6"], // Tiramisu -> Rohan, Ananya
+  "item-7": ["p-1", "p-5"], // Water -> Aarav, Vikram
+};
+
