@@ -5,7 +5,6 @@ import { useSplitStore } from "@/store/useSplitStore";
 import { SettlementBanner } from "@/components/split/SettlementBanner";
 import { RestaurantSummary } from "@/components/split/RestaurantSummary";
 import { OrganizerCard } from "@/components/split/OrganizerCard";
-import { PaymentInstructionsCard } from "@/components/split/PaymentInstructionsCard";
 import { ParticipantBillingCard } from "@/components/split/ParticipantBillingCard";
 import { toast } from "sonner";
 
@@ -18,7 +17,6 @@ export function SplitPage() {
     receiptItems,
     assignments,
     organizerId,
-    organizerUPI,
     isUploaded,
     getParticipantBreakdown,
     resetReceipt,
@@ -42,11 +40,6 @@ export function SplitPage() {
     participants.find((p) => p.isYou) ||
     participants[0];
 
-  const defaultUpiId = activeOrganizer
-    ? `${activeOrganizer.name.toLowerCase().replace(/[^a-z0-9]/g, "")}@oksbi`
-    : "organizer@upi";
-  const effectiveUpiId = organizerUPI.trim() || defaultUpiId;
-
   const formatCurrency = (val: number) => {
     return `₹${val.toLocaleString("en-IN", {
       minimumFractionDigits: 2,
@@ -58,17 +51,16 @@ export function SplitPage() {
     const textLines = [
       `🧾 ${restaurant.name || "Restaurant"} — Settlement Summary`,
       `Total Restaurant Bill: ${formatCurrency(charges.grandTotal)}`,
-      `Organizer / Paid By: ${activeOrganizer?.name || "Collector"} (UPI: ${effectiveUpiId})`,
+      `Paid Upfront By: ${activeOrganizer?.name || "Organizer"}`,
       `---------------------------------------`,
       `Individual Breakdown:`,
       ...breakdown.map((p) => {
         const isOrg = p.participantId === activeOrganizer?.id;
         return `• ${p.name}: ${formatCurrency(p.grandTotal)} ${
-          isOrg ? "(Organizer Share)" : "(To Pay Organizer)"
+          isOrg ? "(Organizer Share)" : "(Amount Owed)"
         }`;
       }),
       `---------------------------------------`,
-      `Pay directly via UPI ID: ${effectiveUpiId}`,
       `Split via SplitBill Engine`,
     ];
     if (navigator.clipboard) {
@@ -82,7 +74,6 @@ export function SplitPage() {
       `🧾 *${restaurant.name || "Restaurant Bill"} — Split Summary*`,
       `Total Bill: *${formatCurrency(charges.grandTotal)}*`,
       `Bill Paid By: *${activeOrganizer?.name || "Organizer"}*`,
-      `UPI ID to Pay: *${effectiveUpiId}*`,
       `------------------------`,
       `*Amounts to Reimburse:*`,
       ...breakdown.map((p) => {
@@ -107,7 +98,7 @@ export function SplitPage() {
           `${restaurant.name || "Restaurant Receipt"} - SETTLEMENT REPORT\n` +
           `Date: ${restaurant.timestamp || new Date().toLocaleDateString()}\n` +
           `Total Restaurant Bill: ₹${charges.grandTotal.toFixed(2)}\n` +
-          `Paid Upfront By: ${activeOrganizer?.name || "Organizer"} (UPI: ${effectiveUpiId})\n` +
+          `Paid Upfront By: ${activeOrganizer?.name || "Organizer"}\n` +
           `========================================\n\n` +
           `PARTICIPANT BREAKDOWN:\n` +
           breakdown
@@ -145,28 +136,14 @@ export function SplitPage() {
         calculatedSum={dinersSum}
       />
 
-      {/* 2. Restaurant Summary Card with Share Summary / WhatsApp / Download */}
-      <RestaurantSummary
-        restaurant={restaurant}
-        grandTotal={charges.grandTotal}
-        peopleCount={participants.length}
-        itemCount={receiptItems.length}
-        onShareSummary={handleShareSummary}
-        onShareWhatsApp={handleShareWhatsApp}
-        onDownloadReceipt={handleDownloadReceipt}
-      />
-
-      {/* 3. Primary Organizer Card (Bill Paid By + Personal QR Upload) */}
+      {/* 2. Primary Organizer Card (Bill Paid By + Personal QR Upload Only) */}
       <OrganizerCard grandTotal={charges.grandTotal} />
 
-      {/* 4. Payment Instructions Card (Organizer QR + Step-by-Step) */}
-      <PaymentInstructionsCard />
-
-      {/* 5. Participant Individual Billing Cards Header */}
-      <div className="flex items-center justify-between px-1 pt-2">
+      {/* 3. Participant Individual Billing Cards Header */}
+      <div className="flex items-center justify-between px-1 pt-1">
         <div className="flex items-center gap-2">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            Individual Participant Billing Cards
+            Participant Billing Cards
           </h2>
           <span className="text-[11px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded-full">
             {participants.length} Diners
@@ -174,11 +151,11 @@ export function SplitPage() {
         </div>
 
         <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-          Itemized costs &amp; payment status
+          Individual item breakdown &amp; amounts owed
         </span>
       </div>
 
-      {/* 6. Participant Billing Cards List */}
+      {/* 4. Participant Billing Cards List */}
       <div className="flex flex-col gap-4">
         {breakdown.map((p) => (
           <ParticipantBillingCard
@@ -191,7 +168,18 @@ export function SplitPage() {
         ))}
       </div>
 
-      {/* 7. Sticky Bottom Action Bar */}
+      {/* 5. Summary & Report Actions (Share Summary / WhatsApp / Download Receipt) */}
+      <RestaurantSummary
+        restaurant={restaurant}
+        grandTotal={charges.grandTotal}
+        peopleCount={participants.length}
+        itemCount={receiptItems.length}
+        onShareSummary={handleShareSummary}
+        onShareWhatsApp={handleShareWhatsApp}
+        onDownloadReceipt={handleDownloadReceipt}
+      />
+
+      {/* 6. Sticky Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-3.5 px-4 sm:px-6 shadow-card-elevated">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <Link
@@ -225,3 +213,4 @@ export function SplitPage() {
     </div>
   );
 }
+

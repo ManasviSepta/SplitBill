@@ -28,12 +28,7 @@ export function SettlementBanner({
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#16A34A] text-white text-[11px] font-bold">
             STEP 5 OF 5
           </span>
-          <span className="text-slate-700">Settlement Ledger &amp; Dispatches</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px]">
-          <Lock className="w-3 h-3 text-slate-400" />
-          <span>Immutable OCR Hash #709-DF</span>
+          <span className="text-slate-700 font-bold">Settlement Summary</span>
         </div>
       </div>
 
