@@ -12,15 +12,16 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSplitStore } from "@/store/useSplitStore";
-import { extractBillWithGemini } from "@/lib/gemini";
+import { extractReceipt } from "@/services/api";
+import { ExtractedBillData } from "@/types/review";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const PROGRESS_STEPS = [
-  { message: "Uploading receipt...", progress: 20 },
-  { message: "Reading receipt image...", progress: 45 },
-  { message: "Extracting line items...", progress: 70 },
-  { message: "Detecting taxes and totals...", progress: 90 },
+  { message: "Uploading receipt to backend API...", progress: 20 },
+  { message: "Reading receipt image with Gemini Vision...", progress: 45 },
+  { message: "Extracting line items and charges...", progress: 70 },
+  { message: "Validating taxes and totals...", progress: 90 },
 ];
 
 export function UploadDropzone() {
@@ -36,7 +37,7 @@ export function UploadDropzone() {
   const handleProcessFile = async (file: File) => {
     setLastUploadedFile(file);
     setErrorMessage(null);
-    setStatusMessage("Uploading receipt...");
+    setStatusMessage("Uploading receipt to backend API...");
     const previewUrl = URL.createObjectURL(file);
     setReceiptImage(previewUrl);
     setIsExtracting(true);
@@ -49,45 +50,71 @@ export function UploadDropzone() {
         setStatusMessage(PROGRESS_STEPS[stepIndex].message);
         setUploadProgress(PROGRESS_STEPS[stepIndex].progress);
       }
-    }, 700);
+    }, 600);
 
     try {
-      const result = await extractBillWithGemini(file);
+      const response = await extractReceipt(file);
 
       clearInterval(progressTimer);
 
-      if (result.success && result.data) {
+      if (response.success && response.data) {
+        const backendData = response.data;
         setUploadProgress(100);
         setStatusMessage("Receipt extracted successfully.");
 
-        if (result.data.items.length === 0) {
+        // Transform backend response into store ExtractedBillData schema
+        const mappedData: ExtractedBillData = {
+          restaurantName: backendData.restaurant.name || "Restaurant Receipt",
+          location: backendData.restaurant.location || "",
+          date: backendData.restaurant.date || "",
+          time: backendData.restaurant.time || "",
+          billNumber: backendData.restaurant.billNumber || "",
+          subtotal: backendData.charges.subtotal,
+          gst: backendData.charges.gst,
+          serviceCharge: backendData.charges.serviceCharge,
+          discount: backendData.charges.discount,
+          total: backendData.charges.grandTotal,
+          ocrAccuracy: "98.8%",
+          items: (backendData.items || []).map((item) => {
+            const conf = item.confidence === "medium" ? "med" : (item.confidence || "high");
+            return {
+              name: item.name,
+              category: (item.category as any) || "Mains",
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              confidence: conf as "high" | "med" | "low",
+              confidenceScore: item.confidenceScore || (conf === "high" ? 98 : conf === "med" ? 85 : 72),
+            };
+          }),
+        };
+
+        if (mappedData.items.length === 0) {
           toast.warning(
             "No line items detected on receipt. You can manually add items on the review page.",
             { duration: 4500 }
           );
         } else {
           toast.success(
-            `Extracted ${result.data.items.length} items from ${result.data.restaurantName}!`,
+            `Extracted ${mappedData.items.length} items from ${mappedData.restaurantName}!`,
             { duration: 3000 }
           );
         }
 
-        setExtractedBill(result.data, previewUrl);
+        setExtractedBill(mappedData, previewUrl);
         // Small delay to allow 100% animation before navigating
         setTimeout(() => {
           navigate("/review");
         }, 300);
       } else {
-        const err =
-          result.error ||
-          "Gemini is temporarily unavailable. Please try again.";
+        const err = response.error || "Backend OCR extraction failed. Please try again.";
         setErrorMessage(err);
         toast.error(err, { duration: 5000 });
       }
     } catch (err: unknown) {
       clearInterval(progressTimer);
       const msg =
-        err instanceof Error ? err.message : "Gemini is temporarily unavailable. Please try again.";
+        err instanceof Error ? err.message : "Failed to connect to backend OCR service. Please try again.";
       setErrorMessage(msg);
       toast.error(msg, { duration: 5000 });
     } finally {

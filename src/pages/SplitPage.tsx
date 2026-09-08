@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { useSplitStore } from "@/store/useSplitStore";
@@ -6,6 +6,8 @@ import { SettlementBanner } from "@/components/split/SettlementBanner";
 import { RestaurantSummary } from "@/components/split/RestaurantSummary";
 import { OrganizerCard } from "@/components/split/OrganizerCard";
 import { ParticipantBillingCard } from "@/components/split/ParticipantBillingCard";
+import { calculateSplit, ParticipantSplitResult } from "@/services/api";
+import { ParticipantBreakdown } from "@/types/people";
 import { toast } from "sonner";
 
 export function SplitPage() {
@@ -23,6 +25,8 @@ export function SplitPage() {
     setStep,
   } = useSplitStore();
 
+  const [backendBreakdown, setBackendBreakdown] = useState<ParticipantBreakdown[] | null>(null);
+
   useEffect(() => {
     if (!isUploaded || receiptItems.length === 0 || participants.length === 0) {
       navigate("/");
@@ -30,9 +34,72 @@ export function SplitPage() {
     }
     setStep(5);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [isUploaded, receiptItems.length, participants.length, navigate, setStep]);
 
-  const breakdown = getParticipantBreakdown();
+    // Fetch calculation from backend API
+    const fetchBackendSplit = async () => {
+      try {
+        const payload = {
+          items: receiptItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            category: item.category,
+          })),
+          charges: {
+            subtotal: charges.subtotal,
+            gst: charges.gstAmount,
+            serviceCharge: charges.serviceFeeAmount,
+            discount: charges.discountAmount,
+            grandTotal: charges.grandTotal,
+          },
+          participants: participants.map((p) => ({
+            id: p.id,
+            name: p.name,
+            color: p.color,
+            avatarInitials: p.avatarInitials,
+            isYou: p.isYou,
+          })),
+          assignments,
+        };
+
+        const res = await calculateSplit(payload);
+        if (res.success && res.participants) {
+          const mapped: ParticipantBreakdown[] = res.participants.map((p) => ({
+            participantId: p.id,
+            name: p.name,
+            initials: p.initials || p.name.slice(0, 2).toUpperCase(),
+            color: p.color || "#16A34A",
+            isYou: p.isYou,
+            itemCount: p.items.length,
+            itemNames: p.items.map((i) => i.name),
+            foodSubtotal: p.foodSubtotal,
+            taxShare: p.gstShare,
+            serviceShare: p.serviceChargeShare,
+            discountShare: p.discountShare,
+            grandTotal: p.finalAmount,
+            percentageOfBill: p.percentageOfBill || 0,
+          }));
+          setBackendBreakdown(mapped);
+        }
+      } catch (err) {
+        console.warn("Using local split calculation engine fallback:", err);
+      }
+    };
+
+    fetchBackendSplit();
+  }, [
+    isUploaded,
+    receiptItems,
+    participants,
+    assignments,
+    charges,
+    navigate,
+    setStep,
+  ]);
+
+  const breakdown = backendBreakdown || getParticipantBreakdown();
   const dinersSum = breakdown.reduce((sum, p) => sum + p.grandTotal, 0);
 
   const activeOrganizer =
