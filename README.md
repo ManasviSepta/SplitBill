@@ -64,8 +64,7 @@ SplitBill/
 │   ├── tests/                # Automated Backend QA Test Suite
 │   ├── requirements.txt      # Python Dependencies
 │   └── README.md
-├── docs/                     # Documentation & UI References
-│   ├── references/           # Application UI Screenshots
+├── docs/                     # Documentation & Specifications
 │   ├── DEVELOPMENT_PLAN.md
 │   ├── PRD.md
 │   └── UI_REFERENCE.md
@@ -172,18 +171,6 @@ npm install
 npm run dev
 ```
 - Frontend runs at: `http://localhost:3000` (or `http://localhost:3001`)
-
----
-
-## Screenshots
-
-| Step | Screen | Preview |
-| :---: | :--- | :--- |
-| **1** | **Upload Receipt** | ![Upload Receipt](docs/references/01-upload-hero-top.png) |
-| **2** | **Review Bill** | ![Review Bill](docs/references/02-review-bill.png) |
-| **3** | **Add People** | ![Add People](docs/references/03-add-people.png) |
-| **4** | **Assign Items** | ![Assign Items](docs/references/04-assign-items.png) |
-| **5** | **Split Result** | ![Split Result](docs/references/05-split-result.png) |
 
 ---
 
