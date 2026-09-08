@@ -8,12 +8,16 @@ import { StickyReviewFooter } from "@/components/review/StickyReviewFooter";
 import { ReceiptModal } from "@/components/review/ReceiptModal";
 import { useSplitStore } from "@/store/useSplitStore";
 
+import { useNavigate } from "react-router-dom";
+
 export function ReviewPage() {
+  const navigate = useNavigate();
   const {
     restaurant,
     receiptItems,
     charges,
     receiptImage,
+    isUploaded,
     setStep,
   } = useSplitStore();
 
@@ -21,8 +25,12 @@ export function ReviewPage() {
   const tableRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!isUploaded || receiptItems.length === 0) {
+      navigate("/");
+      return;
+    }
     setStep(2);
-  }, [setStep]);
+  }, [isUploaded, receiptItems.length, navigate, setStep]);
 
   const flaggedItems = receiptItems.filter(
     (item) => item.flagged || item.confidence !== "high"

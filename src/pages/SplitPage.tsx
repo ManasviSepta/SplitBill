@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, RotateCcw, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import { useSplitStore } from "@/store/useSplitStore";
 import { SettlementBanner } from "@/components/split/SettlementBanner";
 import { RestaurantSummary } from "@/components/split/RestaurantSummary";
-import { ProportionalLedgerBar } from "@/components/split/ProportionalLedgerBar";
-import { ParticipantAmountCard } from "@/components/split/ParticipantAmountCard";
-import { TrustGuaranteeCard } from "@/components/split/TrustGuaranteeCard";
-import { ProofDrawer } from "@/components/split/ProofDrawer";
+import { OrganizerCard } from "@/components/split/OrganizerCard";
+import { PaymentInstructionsCard } from "@/components/split/PaymentInstructionsCard";
+import { ParticipantBillingCard } from "@/components/split/ParticipantBillingCard";
 import { toast } from "sonner";
 
 export function SplitPage() {
@@ -18,20 +17,35 @@ export function SplitPage() {
     participants,
     receiptItems,
     assignments,
+    organizerId,
+    organizerUPI,
+    isUploaded,
     getParticipantBreakdown,
     resetReceipt,
     setStep,
   } = useSplitStore();
 
-  const [isProofDrawerOpen, setIsProofDrawerOpen] = useState(false);
-
   useEffect(() => {
+    if (!isUploaded || receiptItems.length === 0 || participants.length === 0) {
+      navigate("/");
+      return;
+    }
     setStep(5);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [setStep]);
+  }, [isUploaded, receiptItems.length, participants.length, navigate, setStep]);
 
   const breakdown = getParticipantBreakdown();
   const dinersSum = breakdown.reduce((sum, p) => sum + p.grandTotal, 0);
+
+  const activeOrganizer =
+    participants.find((p) => p.id === organizerId) ||
+    participants.find((p) => p.isYou) ||
+    participants[0];
+
+  const defaultUpiId = activeOrganizer
+    ? `${activeOrganizer.name.toLowerCase().replace(/[^a-z0-9]/g, "")}@oksbi`
+    : "organizer@upi";
+  const effectiveUpiId = organizerUPI.trim() || defaultUpiId;
 
   const formatCurrency = (val: number) => {
     return `₹${val.toLocaleString("en-IN", {
@@ -40,144 +54,156 @@ export function SplitPage() {
     })}`;
   };
 
-  const handleCopyAllUPI = () => {
+  const handleShareSummary = () => {
     const textLines = [
-      `🧾 ${restaurant.name} — Bill Settlement Summary`,
-      `Total Bill: ${formatCurrency(charges.grandTotal)}`,
+      `🧾 ${restaurant.name || "Restaurant"} — Settlement Summary`,
+      `Total Restaurant Bill: ${formatCurrency(charges.grandTotal)}`,
+      `Organizer / Paid By: ${activeOrganizer?.name || "Collector"} (UPI: ${effectiveUpiId})`,
       `---------------------------------------`,
-      ...breakdown.map(
-        (p) =>
-          `• ${p.name}: ${formatCurrency(p.grandTotal)} (${p.itemCount} items) | UPI: upi://pay?pa=${p.initials.toLowerCase()}@upi&pn=${encodeURIComponent(
-            p.name
-          )}&am=${p.grandTotal}`
-      ),
+      `Individual Breakdown:`,
+      ...breakdown.map((p) => {
+        const isOrg = p.participantId === activeOrganizer?.id;
+        return `• ${p.name}: ${formatCurrency(p.grandTotal)} ${
+          isOrg ? "(Organizer Share)" : "(To Pay Organizer)"
+        }`;
+      }),
       `---------------------------------------`,
-      `Verified with SplitBill AI Engine`,
+      `Pay directly via UPI ID: ${effectiveUpiId}`,
+      `Split via SplitBill Engine`,
     ];
     if (navigator.clipboard) {
       navigator.clipboard.writeText(textLines.join("\n"));
-      toast.success("All UPI settlement links copied to clipboard!");
+      toast.success("Settlement summary copied to clipboard!");
     }
   };
 
   const handleShareWhatsApp = () => {
     const textLines = [
-      `🧾 *${restaurant.name} — Split Summary*`,
-      `Total: ${formatCurrency(charges.grandTotal)}`,
+      `🧾 *${restaurant.name || "Restaurant Bill"} — Split Summary*`,
+      `Total Bill: *${formatCurrency(charges.grandTotal)}*`,
+      `Bill Paid By: *${activeOrganizer?.name || "Organizer"}*`,
+      `UPI ID to Pay: *${effectiveUpiId}*`,
       `------------------------`,
-      ...breakdown.map(
-        (p) => `• *${p.name}*: ${formatCurrency(p.grandTotal)}`
-      ),
+      `*Amounts to Reimburse:*`,
+      ...breakdown.map((p) => {
+        const isOrg = p.participantId === activeOrganizer?.id;
+        return `• *${p.name}*: ${formatCurrency(p.grandTotal)} ${
+          isOrg ? "_(Already Paid Bill)_" : ""
+        }`;
+      }),
       `------------------------`,
-      `Split cleanly via SplitBill`,
+      `Calculated proportionally via SplitBill`,
     ];
     const url = `https://wa.me/?text=${encodeURIComponent(textLines.join("\n"))}`;
     window.open(url, "_blank");
   };
 
   const handleDownloadReceipt = () => {
-    toast.info("Downloading formatted settlement PDF/Text summary...");
+    toast.info("Downloading settlement report...");
     const element = document.createElement("a");
     const file = new Blob(
       [
-        `${restaurant.name} - Settlement Report\nDate: ${new Date().toLocaleDateString()}\nTotal: ₹${charges.grandTotal}\n\n` +
+        `========================================\n` +
+          `${restaurant.name || "Restaurant Receipt"} - SETTLEMENT REPORT\n` +
+          `Date: ${restaurant.timestamp || new Date().toLocaleDateString()}\n` +
+          `Total Restaurant Bill: ₹${charges.grandTotal.toFixed(2)}\n` +
+          `Paid Upfront By: ${activeOrganizer?.name || "Organizer"} (UPI: ${effectiveUpiId})\n` +
+          `========================================\n\n` +
+          `PARTICIPANT BREAKDOWN:\n` +
           breakdown
             .map(
               (p) =>
-                `${p.name}: ₹${p.grandTotal} (Food: ₹${p.foodSubtotal}, Taxes: ₹${p.taxShare + p.serviceShare}, Disc: ₹${p.discountShare})`
+                `• ${p.name}: ₹${p.grandTotal.toFixed(2)}\n` +
+                `   - Food Subtotal: ₹${p.foodSubtotal.toFixed(2)}\n` +
+                `   - Proportional Taxes: ₹${p.taxShare.toFixed(2)}\n` +
+                `   - Service Charge: ₹${p.serviceShare.toFixed(2)}\n` +
+                (p.discountShare > 0
+                  ? `   - Discount: -₹${p.discountShare.toFixed(2)}\n`
+                  : "") +
+                `   - Items (${p.itemCount}): ${p.itemNames.join(", ")}\n`
             )
-            .join("\n"),
+            .join("\n") +
+          `\n========================================\n` +
+          `Generated with SplitBill Engine\n`,
       ],
       { type: "text/plain" }
     );
     element.href = URL.createObjectURL(file);
-    element.download = `splitbill-${restaurant.name.toLowerCase().replace(/\s+/g, "-")}.txt`;
+    element.download = `splitbill-${(restaurant.name || "receipt")
+      .toLowerCase()
+      .replace(/\s+/g, "-")}-settlement.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex flex-col gap-6 pb-24">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex flex-col gap-6 pb-28">
       {/* 1. Settlement Verified Banner */}
       <SettlementBanner
         grandTotal={charges.grandTotal}
         calculatedSum={dinersSum}
       />
 
-      {/* 2. Restaurant Summary Card with UPI / WhatsApp / Download actions */}
+      {/* 2. Restaurant Summary Card with Share Summary / WhatsApp / Download */}
       <RestaurantSummary
         restaurant={restaurant}
         grandTotal={charges.grandTotal}
         peopleCount={participants.length}
         itemCount={receiptItems.length}
-        onCopyAllUPI={handleCopyAllUPI}
+        onShareSummary={handleShareSummary}
         onShareWhatsApp={handleShareWhatsApp}
         onDownloadReceipt={handleDownloadReceipt}
       />
 
-      {/* 3. Proportional Split Ledger Multi-segment Bar */}
-      <ProportionalLedgerBar
-        breakdown={breakdown}
-        onToggleAlgorithmMath={() => setIsProofDrawerOpen(!isProofDrawerOpen)}
-      />
+      {/* 3. Primary Organizer Card (Bill Paid By + Personal QR Upload) */}
+      <OrganizerCard grandTotal={charges.grandTotal} />
 
-      {/* 4. Participant Allocation Cards Header */}
-      <div className="flex items-center justify-between px-1">
+      {/* 4. Payment Instructions Card (Organizer QR + Step-by-Step) */}
+      <PaymentInstructionsCard />
+
+      {/* 5. Participant Individual Billing Cards Header */}
+      <div className="flex items-center justify-between px-1 pt-2">
         <div className="flex items-center gap-2">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            Participant Allocations
+            Individual Participant Billing Cards
           </h2>
           <span className="text-[11px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded-full">
-            Sorted by amount
+            {participants.length} Diners
           </span>
         </div>
 
         <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-          Tax &amp; Service Charge normalized
+          Itemized costs &amp; payment status
         </span>
       </div>
 
-      {/* 5. Participant Allocation Cards */}
-      <div className="flex flex-col gap-3.5">
-        {breakdown.map((p, idx) => (
-          <ParticipantAmountCard
+      {/* 6. Participant Billing Cards List */}
+      <div className="flex flex-col gap-4">
+        {breakdown.map((p) => (
+          <ParticipantBillingCard
             key={p.participantId}
             breakdown={p}
             receiptItems={receiptItems}
             assignments={assignments}
-            isTopShare={idx === 0}
             grandTotal={charges.grandTotal}
           />
         ))}
       </div>
 
-      {/* 6. Transparent Mathematical Trust Guarantee Card */}
-      <TrustGuaranteeCard
-        isDrawerOpen={isProofDrawerOpen}
-        onToggleDrawer={() => setIsProofDrawerOpen(!isProofDrawerOpen)}
-      />
-
-      {/* 7. Collapsible Proof Drawer */}
-      <ProofDrawer
-        isOpen={isProofDrawerOpen}
-        charges={charges}
-        breakdown={breakdown}
-      />
-
-      {/* 8. Sticky Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-3 px-4 sm:px-6 shadow-card-elevated">
+      {/* 7. Sticky Bottom Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-3.5 px-4 sm:px-6 shadow-card-elevated">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <Link
             to="/assign-items"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-slate-500" />
             <span>Edit Assignments</span>
           </Link>
 
           <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <span>Sum Verification:</span>
+            <span>Verified Total:</span>
             <span className="font-extrabold text-[#16A34A] font-mono">
               {formatCurrency(dinersSum)} / {formatCurrency(charges.grandTotal)}
             </span>
@@ -189,7 +215,7 @@ export function SplitPage() {
               resetReceipt();
               navigate("/");
             }}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-bold shadow-soft transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-bold shadow-soft transition-all cursor-pointer"
           >
             <RotateCcw className="w-4 h-4 text-emerald-400" />
             <span>Start New Bill</span>

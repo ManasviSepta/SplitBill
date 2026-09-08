@@ -8,6 +8,7 @@ import {
   Sparkles,
   RotateCw,
   AlertCircle,
+  FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSplitStore } from "@/store/useSplitStore";
@@ -15,11 +16,18 @@ import { extractBillWithGemini } from "@/lib/gemini";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+const PROGRESS_STEPS = [
+  { message: "Uploading receipt...", progress: 20 },
+  { message: "Reading receipt image...", progress: 45 },
+  { message: "Extracting line items...", progress: 70 },
+  { message: "Detecting taxes and totals...", progress: 90 },
+];
+
 export function UploadDropzone() {
   const navigate = useNavigate();
   const [isExtracting, setIsExtracting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState("Reading receipt...");
+  const [statusMessage, setStatusMessage] = useState("Uploading receipt...");
   const [lastUploadedFile, setLastUploadedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -28,25 +36,25 @@ export function UploadDropzone() {
   const handleProcessFile = async (file: File) => {
     setLastUploadedFile(file);
     setErrorMessage(null);
-    setStatusMessage("Reading receipt...");
+    setStatusMessage("Uploading receipt...");
     const previewUrl = URL.createObjectURL(file);
     setReceiptImage(previewUrl);
     setIsExtracting(true);
     setUploadProgress(20);
 
-    toast.info("Uploading receipt image...", { duration: 1500 });
-
-    // Progress bar simulation
-    const timer = setInterval(() => {
-      setUploadProgress((prev) => (prev < 85 ? prev + 12 : prev));
-    }, 450);
+    let stepIndex = 0;
+    const progressTimer = setInterval(() => {
+      stepIndex++;
+      if (stepIndex < PROGRESS_STEPS.length) {
+        setStatusMessage(PROGRESS_STEPS[stepIndex].message);
+        setUploadProgress(PROGRESS_STEPS[stepIndex].progress);
+      }
+    }, 700);
 
     try {
-      const result = await extractBillWithGemini(file, (msg) => {
-        setStatusMessage(msg);
-      });
+      const result = await extractBillWithGemini(file);
 
-      clearInterval(timer);
+      clearInterval(progressTimer);
 
       if (result.success && result.data) {
         setUploadProgress(100);
@@ -65,23 +73,25 @@ export function UploadDropzone() {
         }
 
         setExtractedBill(result.data, previewUrl);
-        navigate("/review");
+        // Small delay to allow 100% animation before navigating
+        setTimeout(() => {
+          navigate("/review");
+        }, 300);
       } else {
         const err =
           result.error ||
-          "We couldn't reach the AI service right now. Please try again in a few seconds.";
+          "Gemini is temporarily unavailable. Please try again.";
         setErrorMessage(err);
         toast.error(err, { duration: 5000 });
       }
     } catch (err: unknown) {
-      clearInterval(timer);
+      clearInterval(progressTimer);
       const msg =
-        err instanceof Error ? err.message : "We couldn't reach the AI service right now. Please try again in a few seconds.";
+        err instanceof Error ? err.message : "Gemini is temporarily unavailable. Please try again.";
       setErrorMessage(msg);
       toast.error(msg, { duration: 5000 });
     } finally {
-      // Ensure UI is never left stuck in loading state
-      clearInterval(timer);
+      clearInterval(progressTimer);
       setIsExtracting(false);
       setUploadProgress(0);
     }
@@ -113,7 +123,7 @@ export function UploadDropzone() {
       >
         <AnimatePresence mode="wait">
           {isExtracting ? (
-            /* Extracting & Loading State with Dynamic Status Messages */
+            /* Deterministic Extracting & Loading State */
             <motion.div
               key="extracting-state"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -133,34 +143,32 @@ export function UploadDropzone() {
               <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                 {statusMessage}
               </h3>
-              <p className="mt-2 text-sm text-slate-500 max-w-sm">
-                Analyzing line items, quantities, taxes, and service charges.
+              <p className="mt-2 text-xs sm:text-sm text-slate-500 max-w-sm">
+                AI is reading your receipt image with high-precision OCR.
               </p>
 
               {/* Animated Progress Bar */}
-              <div className="w-full max-w-xs mt-6 bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+              <div className="w-full max-w-xs mt-6 bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
                 <motion.div
-                  className="bg-gradient-to-r from-[#16A34A] to-[#22C55E] h-full rounded-full"
-                  initial={{ width: "20%" }}
-                  animate={{ width: `${uploadProgress}%` }}
-                  transition={{ duration: 0.3 }}
+                  className="bg-gradient-to-r from-[#16A34A] to-[#22C55E] h-full rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
                 />
               </div>
-              <span className="text-xs font-semibold text-emerald-700 mt-2">
-                Processing receipt...
+              <span className="text-xs font-semibold text-emerald-700 mt-2.5 font-mono">
+                {uploadProgress}%
               </span>
             </motion.div>
           ) : (
             /* Upload Drop Area */
             <div className="flex flex-col items-center">
-              {/* Error Notice with Retry Button if previous extraction failed */}
+              {/* Error Notice with Retry Buttons if previous extraction failed */}
               {errorMessage && (
-                <div className="w-full mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-left flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-2.5">
+                <div className="w-full mb-6 p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-left flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+                  <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-xs font-bold text-amber-950">
-                        Extraction Incomplete
+                      <h4 className="text-sm font-bold text-amber-950">
+                        We couldn&apos;t read this receipt
                       </h4>
                       <p className="text-xs text-amber-800 font-medium mt-0.5">
                         {errorMessage}
@@ -168,16 +176,29 @@ export function UploadDropzone() {
                     </div>
                   </div>
 
-                  {lastUploadedFile && (
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    {lastUploadedFile && (
+                      <button
+                        type="button"
+                        onClick={() => handleProcessFile(lastUploadedFile)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      >
+                        <RotateCw className="w-3.5 h-3.5" />
+                        <span>Retry Extraction</span>
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => handleProcessFile(lastUploadedFile)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer self-end sm:self-center"
+                      onClick={() => {
+                        setErrorMessage(null);
+                        open();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                     >
-                      <RotateCw className="w-3.5 h-3.5" />
-                      <span>Retry Extraction</span>
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      <span>Upload Another</span>
                     </button>
-                  )}
+                  </div>
                 </div>
               )}
 

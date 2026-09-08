@@ -8,7 +8,7 @@ interface RestaurantSummaryProps {
   grandTotal: number;
   peopleCount: number;
   itemCount: number;
-  onCopyAllUPI: () => void;
+  onShareSummary: () => void;
   onShareWhatsApp: () => void;
   onDownloadReceipt: () => void;
 }
@@ -18,7 +18,7 @@ export function RestaurantSummary({
   grandTotal,
   peopleCount,
   itemCount,
-  onCopyAllUPI,
+  onShareSummary,
   onShareWhatsApp,
   onDownloadReceipt,
 }: RestaurantSummaryProps) {
@@ -46,11 +46,11 @@ export function RestaurantSummary({
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {restaurant.name}
+            {restaurant.name || "Restaurant Bill"}
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            • {peopleCount} People • {itemCount} Line Items • Verified by SplitBill Engine
+            • {peopleCount} Participants • {itemCount} Line Items • Proportional Tax &amp; Split
           </p>
         </div>
 
@@ -68,11 +68,11 @@ export function RestaurantSummary({
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={onCopyAllUPI}
+          onClick={onShareSummary}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold shadow-2xs transition-colors cursor-pointer"
         >
           <Link2 className="w-4 h-4 text-emerald-600" />
-          <span>Copy All UPI Links</span>
+          <span>Share Summary</span>
         </button>
 
         <button

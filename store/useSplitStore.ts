@@ -1,14 +1,6 @@
 import { create } from "zustand";
 import { BillCharges, ExtractedBillData, ReceiptItem, RestaurantInfo } from "@/types/review";
 import { AllocationStats, Participant, ParticipantBreakdown } from "@/types/people";
-import {
-  DEFAULT_ASSIGNMENTS,
-  DEFAULT_PARTICIPANTS,
-  MOCK_CHARGES,
-  MOCK_RECEIPT_ITEMS,
-  MOCK_RESTAURANT,
-  SAMPLE_RECEIPT_IMAGE,
-} from "@/lib/mock-receipt";
 
 interface SplitStore {
   // Navigation & Flow
@@ -32,6 +24,12 @@ interface SplitStore {
   selectedParticipantFilter: string | null;
   itemFilter: "all" | "assigned" | "unassigned" | "shared";
 
+  // Organizer & Settlement State
+  organizerId: string | null;
+  organizerUPI: string;
+  organizerQRImage: string | null;
+  participantPaidStatus: Record<string, boolean>; // participantId -> boolean
+
   // Actions
   setReceiptImage: (url: string | null) => void;
   setExtractedBill: (data: ExtractedBillData, imageUrl: string) => void;
@@ -53,6 +51,12 @@ interface SplitStore {
   setSelectedParticipantFilter: (id: string | null) => void;
   setItemFilter: (filter: "all" | "assigned" | "unassigned" | "shared") => void;
 
+  // Organizer Actions
+  setOrganizerId: (id: string | null) => void;
+  setOrganizerUPI: (upi: string) => void;
+  setOrganizerQRImage: (url: string | null) => void;
+  toggleParticipantPaid: (participantId: string) => void;
+
   // Computed Selectors
   getParticipantBreakdown: () => ParticipantBreakdown[];
   getAllocationStats: () => AllocationStats;
@@ -69,6 +73,30 @@ const PASTEL_COLORS = [
   "#14B8A6", // Teal
 ];
 
+const INITIAL_RESTAURANT: RestaurantInfo = {
+  name: "",
+  location: "",
+  timestamp: "",
+  billNumber: "",
+  ocrAccuracy: "98.8%",
+};
+
+const INITIAL_CHARGES: BillCharges = {
+  subtotal: 0,
+  gstRate: 5,
+  gstAmount: 0,
+  cgstRate: 2.5,
+  sgstRate: 2.5,
+  serviceFeeRate: 0,
+  serviceFeeAmount: 0,
+  discountRate: 0,
+  discountLabel: "Discount",
+  discountAmount: 0,
+  grandTotal: 0,
+  hasDiscrepancy: false,
+  discrepancyWarning: null,
+};
+
 export const useSplitStore = create<SplitStore>((set, get) => ({
   currentStep: 1,
   receiptImage: null,
@@ -76,14 +104,19 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   isExtracting: false,
   uploadProgress: 0,
 
-  restaurant: MOCK_RESTAURANT,
-  receiptItems: MOCK_RECEIPT_ITEMS,
-  charges: MOCK_CHARGES,
+  restaurant: INITIAL_RESTAURANT,
+  receiptItems: [],
+  charges: INITIAL_CHARGES,
 
   participants: [],
   assignments: {},
   selectedParticipantFilter: null,
   itemFilter: "all",
+
+  organizerId: null,
+  organizerUPI: "",
+  organizerQRImage: null,
+  participantPaidStatus: {},
 
   setStep: (step: number) => set({ currentStep: step }),
 
@@ -157,20 +190,14 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       ocrAccuracy: data.ocrAccuracy || "98.8%",
     };
 
-    // Initialize default assignment for newly extracted items (assign first 2-3 participants or unassigned)
+    // Initialize all newly extracted items as unassigned
     const newAssignments: Record<string, string[]> = {};
-    const defaultDiners = get().participants.slice(0, 3).map((p) => p.id);
-    mappedItems.forEach((item, idx) => {
-      // Split first item among diners, leave others ready to assign
-      if (idx === 0) {
-        newAssignments[item.id] = defaultDiners;
-      } else {
-        newAssignments[item.id] = [];
-      }
+    mappedItems.forEach((item) => {
+      newAssignments[item.id] = [];
     });
 
     set({
-      receiptImage: imageUrl || SAMPLE_RECEIPT_IMAGE,
+      receiptImage: imageUrl,
       isUploaded: true,
       isExtracting: false,
       uploadProgress: 100,
@@ -300,6 +327,10 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       participants: [],
       assignments: {},
       selectedParticipantFilter: null,
+      organizerId: null,
+      organizerUPI: "",
+      organizerQRImage: null,
+      participantPaidStatus: {},
     });
   },
 
@@ -324,17 +355,27 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     const colorToUse =
       color || PASTEL_COLORS[get().participants.length % PASTEL_COLORS.length];
 
+    const isFirst = get().participants.length === 0;
+    const newParticipantId = `p-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
     const newParticipant: Participant = {
-      id: `p-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: newParticipantId,
       name: trimmed,
       color: colorToUse,
       avatarColor: colorToUse,
       avatarInitials: initials,
       initials: initials,
-      isYou: get().participants.length === 0,
+      isYou: isFirst,
     };
 
-    set({ participants: [...get().participants, newParticipant] });
+    const nextParticipants = [...get().participants, newParticipant];
+    // If no organizer set yet, default to this first participant
+    const nextOrganizerId = get().organizerId || newParticipantId;
+
+    set({
+      participants: nextParticipants,
+      organizerId: nextOrganizerId,
+    });
     return true;
   },
 
@@ -347,9 +388,16 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       updatedAssignments[itemId] = diners.filter((dId) => dId !== id);
     });
 
+    // If organizer is removed, reassign to next participant if available
+    let nextOrganizerId = get().organizerId;
+    if (nextOrganizerId === id) {
+      nextOrganizerId = updatedParticipants[0]?.id || null;
+    }
+
     set({
       participants: updatedParticipants,
       assignments: updatedAssignments,
+      organizerId: nextOrganizerId,
       selectedParticipantFilter:
         get().selectedParticipantFilter === id ? null : get().selectedParticipantFilter,
     });
@@ -360,6 +408,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       participants: [],
       assignments: {},
       selectedParticipantFilter: null,
+      organizerId: null,
     });
   },
 
@@ -409,6 +458,24 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   setItemFilter: (filter: "all" | "assigned" | "unassigned" | "shared") =>
     set({ itemFilter: filter }),
+
+  // ---------------- ORGANIZER & SETTLEMENT ACTIONS ---------------- //
+
+  setOrganizerId: (id: string | null) => set({ organizerId: id }),
+
+  setOrganizerUPI: (upi: string) => set({ organizerUPI: upi }),
+
+  setOrganizerQRImage: (url: string | null) => set({ organizerQRImage: url }),
+
+  toggleParticipantPaid: (participantId: string) => {
+    const current = get().participantPaidStatus;
+    set({
+      participantPaidStatus: {
+        ...current,
+        [participantId]: !current[participantId],
+      },
+    });
+  },
 
   // ---------------- COMPUTED SELECTORS ---------------- //
 
