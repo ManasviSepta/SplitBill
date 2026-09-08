@@ -129,8 +129,23 @@ export function UploadDropzone() {
     handleProcessFile(acceptedFiles[0]);
   }, []);
 
+  const onDropRejected = useCallback((fileRejections: any[]) => {
+    if (!fileRejections || fileRejections.length === 0) return;
+    const rejection = fileRejections[0];
+    const errors = rejection.errors || [];
+    if (errors.some((e: any) => e.code === "file-too-large")) {
+      toast.error("File is larger than 10 MB. Please upload a smaller receipt photo.");
+    } else if (errors.some((e: any) => e.code === "file-invalid-type")) {
+      toast.error("Invalid file format. Please upload a JPG, PNG, or WEBP receipt image.");
+    } else {
+      toast.error("Could not process this file. Please upload a clear photo of your receipt.");
+    }
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
+    onDropRejected,
+    maxSize: 10 * 1024 * 1024, // 10 MB
     accept: {
       "image/jpeg": [".jpeg", ".jpg"],
       "image/png": [".png"],

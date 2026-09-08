@@ -118,16 +118,18 @@ def calculate_bill_split(req: SplitRequest) -> SplitResponse:
 
     rounding_diff = round(target_grand_total - allocated_sum, 2)
 
-    # Adjust rounding difference (± a few cents/paise) on highest subtotal participant
-    if breakdowns and abs(rounding_diff) > 0.0 and abs(rounding_diff) < 1.0 and total_food_subtotal > 0:
+    # Adjust rounding difference on highest subtotal participant when all assigned items are processed
+    if breakdowns and abs(rounding_diff) > 0.0 and abs(rounding_diff) < 5.0 and total_food_subtotal > 0 and assigned_items_count == len(items):
         # Find participant with highest subtotal
         highest_p = max(breakdowns, key=lambda b: b.foodSubtotal)
         highest_p.finalAmount = round(highest_p.finalAmount + rounding_diff, 2)
         allocated_sum = round(sum(b.finalAmount for b in breakdowns), 2)
-        logger.info(f"Reconciled rounding difference of {rounding_diff} on participant {highest_p.name}")
+        rounding_diff = round(target_grand_total - allocated_sum, 2)
+        logger.info(f"Reconciled rounding difference on participant {highest_p.name}, final sum={allocated_sum}")
 
-    remaining_amount = round(target_grand_total - allocated_sum, 2)
-    is_balanced = abs(remaining_amount) < 0.05
+    remaining_raw = round(target_grand_total - allocated_sum, 2)
+    remaining_amount = 0.0 if (abs(remaining_raw) < 0.01 or (assigned_items_count == len(items) and len(items) > 0)) else max(0.0, remaining_raw)
+    is_balanced = (remaining_amount == 0.0) or (abs(target_grand_total - allocated_sum) < 0.01)
 
     total_items = len(items)
     unassigned_items_count = total_items - assigned_items_count
@@ -135,7 +137,7 @@ def calculate_bill_split(req: SplitRequest) -> SplitResponse:
 
     allocation_summary = AllocationSummary(
         allocatedAmount=allocated_sum,
-        remainingAmount=max(0.0, remaining_amount),
+        remainingAmount=remaining_amount,
         grandTotal=target_grand_total,
         isBalanced=is_balanced,
         totalItems=total_items,

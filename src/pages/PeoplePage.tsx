@@ -121,7 +121,7 @@ export function PeoplePage() {
               type="text"
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              placeholder="Enter friend's name (e.g. Jayesh) and press Enter"
+              placeholder="Enter friend's name and press Enter"
               className="w-full bg-transparent text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
               autoFocus
             />

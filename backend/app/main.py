@@ -22,8 +22,8 @@ app = FastAPI(
     title="SplitBill API",
     description="Precision AI-Powered Dining Bill Splitting Backend with Gemini Vision OCR and Proportional Split Engine.",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.DOCS_ENABLED else None,
+    redoc_url="/redoc" if settings.DOCS_ENABLED else None,
 )
 
 # Configure CORS Middleware for React Frontend
@@ -51,6 +51,8 @@ async def log_requests_middleware(request: Request, call_next):
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Return clean, user-friendly JSON error response for HTTP exceptions."""
     logger.warning(f"HTTP {exc.status_code} on {request.url.path}: {exc.detail}")
+    if isinstance(exc.detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
         content={

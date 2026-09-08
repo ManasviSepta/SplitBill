@@ -1,152 +1,213 @@
-# SplitBill 🧾✨
+# SplitBill
 
-> **Split the bill. Not the friendship.**
+**Split the bill. Not the friendship.**
 
-SplitBill is a high-performance, AI-powered restaurant bill splitting web application designed for group dining. It parses itemized dining receipts, handles proportional GST and service charges down to the exact rupee, and exports deep-links directly to Indian payment apps (UPI, Google Pay, PhonePe, Paytm).
+SplitBill is an AI-powered restaurant receipt splitting application that uses Gemini Vision OCR and a Python FastAPI backend to calculate mathematically accurate participant payments.
 
----
-
-## 🚀 Tech Stack
-
-- **Framework**: [React 19](https://react.dev/) + [Vite 6](https://vitejs.dev/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
-- **File Upload**: [React Dropzone](https://react-dropzone.js.org/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Notifications**: [Sonner](https://sonner.emilkowal.ski/)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![Pydantic](https://img.shields.io/badge/Pydantic-v2.6-E92063?style=flat&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
+[![Gemini Vision](https://img.shields.io/badge/Gemini_Vision-OCR-8E75C2?style=flat&logo=google&logoColor=white)](https://ai.google.dev/)
 
 ---
 
-## 🎨 Design System
+## Features
 
-| Token | Value | Description |
-| :--- | :--- | :--- |
-| **Primary Green** | `#16A34A` | Brand accent & primary CTAs |
-| **Dark Green** | `#15803D` | Active states & gradients |
-| **Background** | `#F8FAF9` | Off-white sage base with dot-grid pattern |
-| **Surface** | `#FFFFFF` | Card & popover surfaces |
-| **Border** | `#E5E7EB` | Subtle structural borders |
-| **Muted Text** | `#64748B` | Secondary copy and subtitles |
-| **Typography** | `Inter` | Clean modern sans-serif |
-| **Card Radius** | `24px` | Standard rounded cards |
-| **Button Radius** | `14px` | Standard rounded buttons |
+- [x] **Upload Restaurant Receipt**: Drag & drop or browse photos of printed dining bills (JPG, PNG, WEBP).
+- [x] **AI Receipt Extraction**: High-precision Gemini Vision OCR extracts item names, quantities, prices, taxes, and service charges.
+- [x] **Review and Edit Extracted Bill**: Interactive editable table to verify prices, quantities, and adjust line items.
+- [x] **Add Dining Companions Dynamically**: Add friends on the fly with personalized persistent avatar colors.
+- [x] **Assign Dishes**: Tag individual diners or split shared dishes equally among multiple people with one tap.
+- [x] **Proportional Distribution**: Mathematically sound allocation of GST, service charge, and discounts based on actual consumption.
+- [x] **Individual Participant Billing Cards**: Clear breakdown showing each diner's dishes, tax share, and exact final amount.
+- [x] **Organizer QR Upload**: Bill payer can upload their personal UPI QR code (GPay/PhonePe/Paytm) for instant reimbursement.
+- [x] **Zero Discrepancy Reconciliation**: Automatic remainder balancing ensures the sum of all payments matches the bill total to the exact paisa.
 
 ---
 
-## 📂 Project Structure
+## Tech Stack
 
+### Frontend
+- **Framework**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS v4
+- **State Management**: Zustand
+- **Animations**: Framer Motion
+- **Icons & UI**: Lucide React, Sonner (Toasts), React Dropzone, QRCode.react
+
+### Backend
+- **Framework**: Python 3.12 + FastAPI
+- **Validation**: Pydantic v2
+- **AI & OCR Engine**: Google GenAI SDK (Gemini Vision OCR)
+- **Image Processing**: Pillow (PIL)
+- **ASGI Server**: Uvicorn
+- **Utilities**: Python Multipart, Python Dotenv
+
+> **Communication**: The React frontend and FastAPI backend communicate exclusively via structured REST API endpoints.
+
+---
+
+## Project Architecture
+
+```text
+SplitBill/
+├── backend/                  # FastAPI Python Backend
+│   ├── app/
+│   │   ├── api/              # API Route Handlers (health, receipt, split)
+│   │   ├── models/           # Pydantic Schemas & Data Contracts
+│   │   ├── services/         # Gemini OCR & Proportional Split Engine
+│   │   ├── utils/            # Image Validation & Helpers
+│   │   ├── config.py         # App Configuration & Environment Variables
+│   │   └── main.py           # FastAPI App Entrypoint
+│   ├── tests/                # Automated Backend QA Test Suite
+│   ├── requirements.txt      # Python Dependencies
+│   └── README.md
+├── docs/                     # Documentation & UI References
+│   ├── references/           # Application UI Screenshots
+│   ├── DEVELOPMENT_PLAN.md
+│   ├── PRD.md
+│   └── UI_REFERENCE.md
+├── src/                      # Complete React Application
+│   ├── components/           # Modular UI Components (upload, review, people, assign, split, layout)
+│   ├── hooks/                # Custom React Hooks
+│   ├── lib/                  # Utilities & Application Constants
+│   ├── pages/                # Application Page Views
+│   ├── services/             # Backend API Client (api.ts)
+│   ├── store/                # Zustand Global Store (useSplitStore.ts)
+│   ├── types/                # TypeScript Interfaces & Models
+│   ├── App.tsx               # Root Routing & App Shell
+│   ├── index.css             # Tailwind CSS Design System
+│   └── main.tsx              # React DOM Entry
+├── public/                   # Static Assets
+├── .env.example              # Environment Template (Frontend)
+├── .env.production.example   # Production Environment Template
+├── tsconfig.json             # TypeScript Configuration
+├── vite.config.ts            # Vite Configuration
+└── package.json              # Node.js Dependencies
 ```
-d:/Split_the_bill/
-├── src/
-│   ├── App.tsx                   # Main application layout
-│   ├── index.css                 # Tailwind CSS v4 tokens & global styles
-│   └── main.tsx                  # React 19 application entry point
-├── components/
-│   ├── layout/
-│   │   ├── Navbar.tsx            # Sticky navigation bar with stepper & profile
-│   │   ├── ProgressStepper.tsx   # 5-step interactive workflow stepper
-│   │   └── Footer.tsx            # Minimal footer with trust badges & copyright
-│   ├── upload/
-│   │   ├── UploadHero.tsx        # Hero section with Gemini badge & trust chips
-│   │   ├── UploadDropzone.tsx    # Drag-and-drop receipt card with preview
-│   │   ├── TrustStats.tsx        # Volume statistics & social proof strip
-│   │   ├── FeatureCard.tsx       # AI Instant OCR, Human-in-the-Loop, Proportional GST
-│   │   └── PaymentApps.tsx       # Deep-link Indian payment app chips
-│   └── shared/
-│       ├── Badge.tsx             # Reusable badge component
-│       ├── SectionTitle.tsx      # Section heading & subtitle component
-│       └── GradientButton.tsx    # Emerald gradient CTA with hover lift & glow
-├── lib/
-│   ├── mock-data.ts              # Static data, Olive Bistro sample receipt, feature items
-│   └── utils.ts                  # Utility functions (cn helper)
-├── store/
-│   └── useSplitStore.ts          # Zustand store for uploaded files & bill state
-├── hooks/
-│   └── useMediaQuery.ts          # Responsive screen breakpoint helper
-├── types/
-│   └── index.ts                  # TypeScript types & interfaces
-├── docs/
-│   ├── DEVELOPMENT_PLAN.md       # Multi-phase development roadmap
-│   ├── PRD.md                    # Product requirements & user flow
-│   └── UI_REFERENCE.md           # Screenshot mapping & visual design rules
-├── references/                   # UI screenshot designs
-├── index.html                    # HTML entry point with Google Fonts
-├── vite.config.ts                # Vite configuration with @/* path aliases
-└── tsconfig.json                 # TypeScript compiler configuration
-```
 
 ---
 
-## 🛠️ Getting Started
+## Application Workflow
 
-### Prerequisites
+```text
+Upload Receipt ──> Review Bill ──> Add People ──> Assign Items ──> Split Result
+```
 
-- Node.js `20.x` or higher
-- npm `10.x` or higher
+1. **Upload Receipt**: Upload a photo of the restaurant bill for automated Gemini Vision OCR parsing.
+2. **Review Bill**: Verify extracted line items, prices, GST, service charge, and bill totals in an editable table.
+3. **Add People**: Enter dining companion names and pick avatar accent colors.
+4. **Assign Items**: Tag everyone who shared each dish, main course, drink, or dessert.
+5. **Split Result**: View transparent individual billing cards, scan the organizer's UPI QR, and share settlement receipts.
 
-### Installation
+---
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ManasviSepta/SplitBill.git
-   cd SplitBill
-   ```
+## Backend API
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+| Endpoint | Method | Purpose | Response |
+| :--- | :--- | :--- | :--- |
+| `/api/health` | `GET` | Health check and uptime status | `{"status": "ok", "service": "SplitBill API", "version": "1.0.0"}` |
+| `/api/receipt/extract` | `POST` | Upload receipt image and extract structured items & charges | `{"success": true, "data": { "restaurant": {...}, "charges": {...}, "items": [...] }}` |
+| `/api/split/calculate` | `POST` | Calculate exact proportional split and balanced diner ledger | `{"success": true, "participants": [...], "allocation": { "isBalanced": true, ... }}` |
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+---
 
-4. Open your browser and navigate to:
-   ```
-   http://localhost:3000/
-   ```
+## Environment Variables
 
-### Production Build
+### Frontend `.env`
+```env
+# Backend API Base URL
+VITE_API_URL=http://127.0.0.1:8000
+```
+- `VITE_API_URL`: The root URL of the running FastAPI backend server.
 
-To build the application for production:
+### Backend `.env`
+```env
+# Google Gemini API Key (Required for Receipt OCR)
+GEMINI_API_KEY=your_gemini_api_key_here
 
+# Server Port & CORS
+PORT=8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173
+```
+- `GEMINI_API_KEY`: API key from Google AI Studio used for receipt OCR.
+- `PORT`: Port on which Uvicorn runs the FastAPI backend.
+- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins for CORS.
+
+---
+
+## Local Development
+
+### 1. Backend Setup
 ```bash
-npm run build
+# Navigate to backend directory
+cd backend
+
+# Create & activate Python virtual environment
+python -m venv venv
+# On Windows:
+.\venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start FastAPI backend server
+uvicorn app.main:app --reload --port 8000
 ```
+- Backend runs at: `http://localhost:8000`
+- Interactive Swagger API docs: `http://localhost:8000/docs`
 
-To preview the production build locally:
+---
 
+### 2. Frontend Setup
 ```bash
-npm run preview
+# Install dependencies (from project root)
+npm install
+
+# Start Vite development server
+npm run dev
 ```
+- Frontend runs at: `http://localhost:3000` (or `http://localhost:3001`)
 
 ---
 
-## 📱 Phase 1 Features (Completed)
+## Screenshots
 
-- [x] **Sticky Navigation**: Floating pill navbar with ₹ logo, `v2.4 AI` badge, currency indicator, green `+` action button, user avatar, and mobile navigation drawer.
-- [x] **5-Step Horizontal Stepper**: Progress visualization from `1. Upload Receipt` through `5. Split Result`.
-- [x] **Hero Section**: "✨ Powered by Gemini 1.5 Pro Multimodal Vision" badge, dual-tone heading, and trust checkmark chips.
-- [x] **Interactive Upload Area**: React Dropzone supporting drag & drop, file browse, image preview with remove option, and one-click sample Olive Bistro bill loader.
-- [x] **Trust Statistics**: ₹4.8 Cr+ volume metric, 95k+ meals processed, overlapping community avatars, and 4.9/5 trust rating.
-- [x] **Feature Highlights**: AI Instant OCR (99.2% accuracy), Human-in-the-Loop confidence badges, and Proportional GST calculator cards.
-- [x] **Payment Ecosystem**: Deep-link badges for UPI Auto-Collect, Google Pay, PhonePe, Paytm, and Cash Ledger.
-- [x] **Responsive Layout**: Desktop-first design optimized for tablets and mobile devices.
-
----
-
-## 🗺️ Roadmap (Upcoming Phases)
-
-- **Phase 2**: Review & Edit Bill screen (`/review`) with editable dish prices, quantities, and GST breakdown.
-- **Phase 3**: People & Assignment screen (`/people` & `/assign`) for tagging friends to specific dishes.
-- **Phase 4**: Final Settlement & UPI deep-links (`/split`) with WhatsApp export.
-- **Phase 5**: Gemini 1.5 Pro multimodal vision OCR integration for live receipt scanning.
+| Step | Screen | Preview |
+| :---: | :--- | :--- |
+| **1** | **Upload Receipt** | ![Upload Receipt](docs/references/01-upload-hero-top.png) |
+| **2** | **Review Bill** | ![Review Bill](docs/references/02-review-bill.png) |
+| **3** | **Add People** | ![Add People](docs/references/03-add-people.png) |
+| **4** | **Assign Items** | ![Assign Items](docs/references/04-assign-items.png) |
+| **5** | **Split Result** | ![Split Result](docs/references/05-split-result.png) |
 
 ---
 
-## 📄 License
+## Project Highlights
 
-MIT License © 2025 SplitBill AI Technologies.
+- **Gemini Vision OCR**: High-accuracy multi-model extraction with automatic fallback and retry resilience.
+- **FastAPI Backend**: Clean modular architecture with Pydantic v2 validation and structured logging.
+- **Pydantic Validation**: Strict schemas validate every extracted receipt item and bill calculation payload.
+- **Exact Proportional Split Algorithm**: Proportional tax/discount allocation with automatic remainder balancing ensuring 0 discrepancy.
+- **Zero Mock Receipt Data**: Strictly processes real uploaded receipt images with zero placeholder dishes.
+- **Responsive UI**: Built with Tailwind CSS v4 and Framer Motion for smooth mobile, tablet, and desktop experiences.
+- **Type-Safe Full Stack**: TypeScript interfaces on frontend synchronized with Pydantic models on backend.
+
+---
+
+## Future Improvements
+
+- [ ] **Multi-Receipt Support**: Merge multiple food, bar, and dessert receipts into a single settlement session.
+- [ ] **Real-Time Collaborative Splitting**: Allow multiple friends to join via room code and tag items from their own phones.
+- [ ] **Receipt History**: Export past dining receipts to PDF with tax deduction tags.
+- [ ] **Direct Payment Confirmation**: Webhook integration for instant UPI payment verification.
+
+---
+
+## License
+
+Built for placement / hackathon submission.

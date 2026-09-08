@@ -524,8 +524,20 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       };
     });
 
-    // Sort descending by highest amount (as in screenshot)
-    return breakdown.sort((a, b) => b.grandTotal - a.grandTotal);
+    // Sort descending by highest amount
+    const sortedBreakdown = breakdown.sort((a, b) => b.grandTotal - a.grandTotal);
+
+    // Reconcile rounding difference on highest subtotal participant when all items are allocated
+    const assignedCount = receiptItems.filter((i) => (assignments[i.id] || []).length > 0).length;
+    if (sortedBreakdown.length > 0 && assignedCount === receiptItems.length && receiptItems.length > 0) {
+      const calculatedSum = Number(sortedBreakdown.reduce((s, p) => s + p.grandTotal, 0).toFixed(2));
+      const roundingDiff = Number((charges.grandTotal - calculatedSum).toFixed(2));
+      if (Math.abs(roundingDiff) > 0 && Math.abs(roundingDiff) < 5.0) {
+        sortedBreakdown[0].grandTotal = Number((sortedBreakdown[0].grandTotal + roundingDiff).toFixed(2));
+      }
+    }
+
+    return sortedBreakdown;
   },
 
   getAllocationStats: (): AllocationStats => {

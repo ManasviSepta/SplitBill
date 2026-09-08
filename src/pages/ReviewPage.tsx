@@ -89,6 +89,8 @@ export function ReviewPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         imageUrl={receiptImage}
+        restaurantName={restaurant.name}
+        billNumber={restaurant.billNumber}
       />
     </motion.div>
   );

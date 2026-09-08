@@ -1,4 +1,4 @@
-import { FeatureItem, StepItem, TrustStatsData, SampleBillData } from "@/types";
+import { FeatureItem, StepItem, TrustStatsData } from "@/types";
 
 export const APP_VERSION = "v2.4 AI";
 
@@ -81,26 +81,7 @@ export const PAYMENT_APPS = [
 ];
 
 export const FOOTER_TRUST_BADGES = [
-  { label: "Gemini 1.5 Pro OCR", icon: "sparkle" },
+  { label: "Gemini Vision OCR", icon: "sparkle" },
   { label: "Bank-grade Split Accuracy", icon: "shield" },
   { label: "Export to UPI / WhatsApp", icon: "export" },
 ];
-
-export const SAMPLE_OLIVE_BISTRO_BILL: SampleBillData = {
-  restaurant: "Olive Bistro & Kitchen",
-  branch: "Cyber Hub, Gurugram",
-  date: "2025-02-28",
-  time: "21:30",
-  subtotal: 3500,
-  cgst: 87.5,
-  sgst: 87.5,
-  serviceCharge: 350,
-  total: 4120,
-  items: [
-    { id: "1", name: "Wood-Fired Truffle Funghi Pizza", quantity: 1, price: 850 },
-    { id: "2", name: "Spaghetti Aglio Olio e Peperoncino", quantity: 2, price: 1100 },
-    { id: "3", name: "Burrata & Heirloom Tomato Salad", quantity: 1, price: 650 },
-    { id: "4", name: "Artisanal Mint Mojito", quantity: 2, price: 500 },
-    { id: "5", name: "Classic Italian Tiramisu", quantity: 1, price: 400 },
-  ],
-};

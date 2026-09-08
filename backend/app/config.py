@@ -21,6 +21,7 @@ class Settings:
     PORT: int = int(os.getenv("PORT", "8000"))
     HOST: str = os.getenv("HOST", "0.0.0.0")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    DOCS_ENABLED: bool = os.getenv("DOCS_ENABLED", "true" if os.getenv("ENVIRONMENT") != "production" else "false").lower() in ["true", "1", "yes"]
 
     # CORS Origins
     _cors_raw: str = os.getenv(

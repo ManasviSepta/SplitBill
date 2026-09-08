@@ -1,3 +1,4 @@
+import re
 import logging
 from typing import Any, Dict, List
 from app.models.receipt import ReceiptCharges, ReceiptItem, ReceiptResponse, Restaurant
@@ -12,8 +13,11 @@ NON_ITEM_KEYWORDS = [
     "taxes",
     "cgst",
     "sgst",
+    "igst",
     "gst",
+    "gstin",
     "vat",
+    "tin",
     "service charge",
     "service fee",
     "round off",
@@ -29,9 +33,37 @@ NON_ITEM_KEYWORDS = [
     "tip",
     "gratuity",
     "table no",
+    "table #",
     "order no",
+    "order #",
     "bill no",
+    "bill #",
     "invoice no",
+    "invoice #",
+    "token no",
+    "token #",
+    "pincode",
+    "pin code",
+    "thank you",
+    "visit again",
+    "have a nice day",
+    "customer care",
+    "feedback",
+    "terms & conditions",
+    "terms and conditions",
+    "merchant id",
+    "terminal id",
+    "auth code",
+    "rrn",
+    "fssai",
+]
+
+# Regex patterns for non-item lines (GSTIN, Phone numbers, URLs, UPI IDs)
+NON_ITEM_REGEXES = [
+    re.compile(r"^\d{2}[a-z]{5}\d{4}[a-z]{1}[a-z\d]{1}[z]{1}[a-z\d]{1}$", re.IGNORECASE),  # GSTIN
+    re.compile(r"(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"),  # Phone numbers
+    re.compile(r"https?://|www\.|\.com|\.in|\.org|\.net", re.IGNORECASE),  # URLs
+    re.compile(r"[\w.-]+@(okhdfcbank|okaxis|okicici|oksbi|paytm|ybl|upi)", re.IGNORECASE),  # UPI IDs
 ]
 
 
@@ -75,7 +107,7 @@ def parse_and_validate_receipt(raw_data: Dict[str, Any]) -> ReceiptResponse:
 
         lower_name = name.lower()
 
-        # Reject rows that are tax/subtotal headers
+        # Reject rows that are tax/subtotal headers or metadata
         if any(
             lower_name == kw
             or lower_name.startswith(kw + " ")
@@ -83,6 +115,10 @@ def parse_and_validate_receipt(raw_data: Dict[str, Any]) -> ReceiptResponse:
             or lower_name.endswith(" " + kw)
             for kw in NON_ITEM_KEYWORDS
         ):
+            continue
+
+        # Reject rows matching GSTIN, phone, URL, or UPI patterns
+        if any(rx.search(name) for rx in NON_ITEM_REGEXES):
             continue
 
         try:

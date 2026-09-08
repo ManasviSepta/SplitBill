@@ -1,7 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck,
   Utensils,
+  ChevronDown,
+  ChevronUp,
+  Calculator,
 } from "lucide-react";
 import { ParticipantBreakdown } from "@/types/people";
 import { ReceiptItem } from "@/types/review";
@@ -23,6 +27,7 @@ export function ParticipantBillingCard({
   grandTotal,
 }: ParticipantBillingCardProps) {
   const { organizerId, participants } = useSplitStore();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Determine if this participant is the active organizer
   const activeOrganizer =
@@ -56,9 +61,12 @@ export function ParticipantBillingCard({
     });
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       className={cn(
-        "bg-white rounded-[24px] border shadow-soft p-5 sm:p-6 flex flex-col gap-4 transition-all",
+        "bg-white rounded-[24px] border shadow-soft p-5 sm:p-6 flex flex-col gap-4 transition-all hover:shadow-card-elevated",
         isOrganizer
           ? "border-emerald-300/80 bg-linear-to-b from-white to-emerald-50/10 shadow-sm"
           : "border-slate-200/90 hover:border-slate-300"
@@ -97,7 +105,7 @@ export function ParticipantBillingCard({
         {/* Final Amount Owed / Share */}
         <div className="text-left sm:text-right bg-slate-50/80 border border-slate-200/80 rounded-2xl px-4 py-2 self-start sm:self-auto">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-            {isOrganizer ? "NET SHARE" : "AMOUNT OWED"}
+            {isOrganizer ? "NET SHARE" : "AMOUNT TO PAY"}
           </span>
           <span className="text-2xl sm:text-3xl font-black text-[#16A34A] tracking-tight">
             {formatCurrency(breakdown.grandTotal)}
@@ -182,12 +190,63 @@ export function ParticipantBillingCard({
         )}
 
         <div className="flex justify-between items-center pt-2 border-t border-slate-200 font-extrabold text-sm text-slate-900">
-          <span>{isOrganizer ? "Net Out-of-Pocket Share:" : "Final Amount Owed:"}</span>
+          <span>{isOrganizer ? "Net Out-of-Pocket Share:" : "Final Payable Amount:"}</span>
           <span className="text-[#16A34A] text-base font-black">
             {formatCurrency(breakdown.grandTotal)}
           </span>
         </div>
       </div>
-    </div>
+
+      {/* 4. Accordion: View Billing Calculation Details */}
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+        >
+          <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+          <span>{isExpanded ? "Hide calculation breakdown" : "View calculation details"}</span>
+          {isExpanded ? (
+            <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+          )}
+        </button>
+
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mt-3 bg-slate-900 text-slate-200 rounded-xl p-3.5 text-xs font-mono flex flex-col gap-1.5 overflow-hidden"
+            >
+              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                Fair Share Algorithm
+              </span>
+              <p className="text-[11px] text-slate-300">
+                • Food share: ₹{breakdown.foodSubtotal.toFixed(2)} ({breakdown.percentageOfBill}% of meal)
+              </p>
+              <p className="text-[11px] text-slate-300">
+                • Tax allocation: ({breakdown.percentageOfBill}% × GST) = ₹{breakdown.taxShare.toFixed(2)}
+              </p>
+              <p className="text-[11px] text-slate-300">
+                • Service fee: ({breakdown.percentageOfBill}% × Service) = ₹{breakdown.serviceShare.toFixed(2)}
+              </p>
+              {breakdown.discountShare > 0 && (
+                <p className="text-[11px] text-slate-300">
+                  • Discount: -({breakdown.percentageOfBill}% × Discount) = -₹{breakdown.discountShare.toFixed(2)}
+                </p>
+              )}
+              <div className="pt-1.5 border-t border-slate-700 font-bold text-white flex justify-between">
+                <span>Total Reconciled:</span>
+                <span className="text-emerald-400">₹{breakdown.grandTotal.toFixed(2)}</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }

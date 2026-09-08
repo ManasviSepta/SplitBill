@@ -60,7 +60,7 @@ export function FriendInput() {
             type="text"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Enter friend's name, phone, or UPI ID (e.g. rohan@upi)"
+            placeholder="Enter friend's name and press Enter"
             className="w-full bg-transparent text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
           />
 
